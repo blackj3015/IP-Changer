@@ -22,6 +22,21 @@ if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdent
     exit
 }
 
+# Revert to DHCP Function
+function Revert-ToDHCP {
+    try {
+        Write-Host "Reverting adapter to DHCP..."
+        $iface = $adapter | Get-NetIPInterface -AddressFamily IPv4
+        $iface | Set-NetIPInterface -Dhcp Enabled
+        $iface | Set-DnsClientServerAddress -ResetServerAddresses
+        $adapter | Restart-NetAdapter
+        Write-Host "Adapter reverted to DHCP."
+    }
+    catch {
+        Write-Host "Failed to revert to DHCP: $_"
+    }
+}
+
 # Get all network adapters without filtering status
 $adapters = Get-NetAdapter | Where-Object { $_.Status -ne "Not Present" }
 
@@ -66,6 +81,7 @@ while (-not $exit) {
             Write-Host "Adapter reverted to DHCP."
         }
         "3" {
+            Revert-ToDHCP
             $exit = $true
             Write-Host "Exiting script."
         }
@@ -74,6 +90,9 @@ while (-not $exit) {
         }
     }
 }
+
+# Register event to run cleanup at PowerShell termination
+$null = Register-EngineEvent PowerShell.Exiting -Action { Revert-ToDHCP }
 
 Write-Host "`nScript execution complete. Press Enter to exit."
 Read-Host
