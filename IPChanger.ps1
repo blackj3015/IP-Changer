@@ -25,15 +25,15 @@ if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdent
 # Revert to DHCP Function
 function Revert-ToDHCP {
     try {
-        Write-Host "Reverting adapter to DHCP..."
+        Write-Host "Reverting adapter to DHCP..." -ForegroundColor Green
         $iface = $adapter | Get-NetIPInterface -AddressFamily IPv4
         $iface | Set-NetIPInterface -Dhcp Enabled
         $iface | Set-DnsClientServerAddress -ResetServerAddresses
         $adapter | Restart-NetAdapter
-        Write-Host "Adapter reverted to DHCP."
+        Write-Host "Adapter reverted to DHCP." -ForegroundColor Green
     }
     catch {
-        Write-Host "Failed to revert to DHCP: $_"
+        Write-Host "Failed to revert to DHCP: $_" -ForegroundColor Red
     }
 }
 
@@ -41,7 +41,7 @@ function Revert-ToDHCP {
 $adapters = Get-NetAdapter | Where-Object { $_.Status -ne "Not Present" }
 
 if ($adapters.Count -eq 0) {
-    Write-Host "No network adapters found. Please check your adapter status."
+    Write-Host "No network adapters found. Please check your adapter status." -ForegroundColor Red
     exit
 }
 
@@ -50,7 +50,7 @@ for ($i=0; $i -lt $adapters.Count; $i++) {
     Write-Host "${i}: $($adapters[$i].Name) - Status: $($adapters[$i].Status)"
 }
 
-$sel = Read-Host "Select the adapter by number"
+$sel = Read-Host "Select the adapter by number" 
 $adapter = $adapters[$sel]
 $exit = $false
 while (-not $exit) {
@@ -63,8 +63,8 @@ while (-not $exit) {
         "1" {
             $IP = Read-Host -Prompt "Enter Static IP Address"
             $MaskBits = Read-Host -Prompt "Enter Prefix Length (e.g. 24)"
-            $Gateway = Read-Host -Prompt "Enter Gateway IP"
-            $DNS = Read-Host -Prompt "Enter DNS servers (comma-separated)"
+            $Gateway = Read-Host -Prompt "Enter Gateway IP (e.g. 192.168.1.1)"
+            $DNS = Read-Host -Prompt "Enter DNS servers (comma-separated e.g. 8.8.8.8, 1.1.1.1)"
             $DNSlist = $DNS -split ','
             # Remove old config
             $adapter | Remove-NetIPAddress -AddressFamily IPv4 -Confirm:$false
@@ -78,15 +78,15 @@ while (-not $exit) {
             $iface | Set-NetIPInterface -DHCP Enabled
             $iface | Set-DnsClientServerAddress -ResetServerAddresses
             $adapter | Restart-NetAdapter
-            Write-Host "Adapter reverted to DHCP."
+            Write-Host "Adapter reverted to DHCP." -ForegroundColor Green
         }
         "3" {
             Revert-ToDHCP
             $exit = $true
-            Write-Host "Exiting script."
+            Write-Host "Exiting script." -ForegroundColor Green
         }
         default {
-            Write-Host "Invalid selection."
+            Write-Host "Invalid selection." -ForegroundColor Red
         }
     }
 }
@@ -94,5 +94,5 @@ while (-not $exit) {
 # Register event to run cleanup at PowerShell termination
 $null = Register-EngineEvent PowerShell.Exiting -Action { Revert-ToDHCP }
 
-Write-Host "`nScript execution complete. Press Enter to exit."
+Write-Host "`nScript execution complete. Press Enter to close application." -ForegroundColor Green
 Read-Host
